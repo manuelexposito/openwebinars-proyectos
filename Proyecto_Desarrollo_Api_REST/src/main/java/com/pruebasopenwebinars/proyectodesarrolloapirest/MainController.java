@@ -1,22 +1,27 @@
 package com.pruebasopenwebinars.proyectodesarrolloapirest;
 
-import com.pruebasopenwebinars.proyectodesarrolloapirest.error.CategoriaNotFoundException;
-import com.pruebasopenwebinars.proyectodesarrolloapirest.error.ProductoBadRequestException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.pruebasopenwebinars.proyectodesarrolloapirest.error.ApiError;
+
+
 import com.pruebasopenwebinars.proyectodesarrolloapirest.error.ProductoNotFoundException;
 import com.pruebasopenwebinars.proyectodesarrolloapirest.models.*;
 import com.pruebasopenwebinars.proyectodesarrolloapirest.services.CategoriaService;
 import com.pruebasopenwebinars.proyectodesarrolloapirest.services.ProductoService;
+import com.sun.istack.NotNull;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.extern.java.Log;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
+@Log
 public class MainController {
 
     private final ProductoService productoService;
@@ -36,18 +41,47 @@ public class MainController {
 
     //TODO: Ver como mejorar este código (no funciona)
     @PostMapping("/producto")
-    public GetProductoDto createProducto(CreateProductoDto newProducto){
+    public ResponseEntity<GetProductoDto> createProducto(@NotNull CreateProductoDto newProducto){
 
         Optional<Categoria> categoriaSelected = categoriaService.findById(newProducto.getCategoriaId());
-        Producto p = productoDtoConverter.convertCreateDtoToProducto(newProducto);
-        productoService.save(p);
-        Categoria c = categoriaSelected.get();
-        productoService.addCategoriaToProducto(p, c);
-        productoService.edit(p);
-        categoriaService.edit(c);
 
-        return productoService.findById(p.getId()).map(productoDtoConverter::convertToDto).orElseThrow(()-> new ProductoBadRequestException());
+        if(categoriaSelected.isPresent()){
+            Categoria c = categoriaSelected.get();
+            Producto savedProducto = productoService.saveProducto(newProducto, productoDtoConverter);
+            productoService.addCategoriaToProducto(savedProducto, c, categoriaService);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(productoDtoConverter.convertToDto(savedProducto));
+        }
+
+       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 
     }
+
+
+    @ExceptionHandler(ProductoNotFoundException.class)
+    public ResponseEntity<ApiError> handleProductoNoEncontrado(ProductoNotFoundException exception){
+
+        ApiError error = new ApiError();
+
+        error.setEstado(HttpStatus.NOT_FOUND);
+        error.setFecha(LocalDateTime.now());
+        error.setMensaje(exception.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+
+    }
+
+    public ResponseEntity<ApiError> handleJsonMappingException(JsonMappingException exception){
+
+        ApiError error = new ApiError();
+
+        error.setEstado(HttpStatus.BAD_REQUEST);
+        error.setFecha(LocalDateTime.now());
+        error.setMensaje(exception.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+
+    }
+
 
 }
