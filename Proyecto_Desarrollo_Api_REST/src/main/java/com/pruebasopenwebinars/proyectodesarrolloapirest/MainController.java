@@ -32,7 +32,7 @@ public class MainController {
     //public List<GetProductoDto> findAllProductos()
 
     @GetMapping("/producto/{id}")
-    public GetProductoDto getProducto(@PathVariable Long id){
+    public GetProductoDto getProducto(@PathVariable Long id) {
 
         return productoService.findById(id).map(productoDtoConverter::convertToDto).orElseThrow(() -> new ProductoNotFoundException(id));
 
@@ -41,45 +41,16 @@ public class MainController {
 
     //TODO: Ver como mejorar este código (no funciona)
     @PostMapping("/producto")
-    public ResponseEntity<GetProductoDto> createProducto(@NotNull CreateProductoDto newProducto){
+    public ResponseEntity<GetProductoDto> createProducto(CreateProductoDto newProducto) {
+
+
+        Producto savedProducto = productoService.saveProducto(newProducto, productoDtoConverter);
 
         Optional<Categoria> categoriaSelected = categoriaService.findById(newProducto.getCategoriaId());
+        Categoria c = categoriaSelected.get();
+        productoService.addCategoriaToProducto(savedProducto, c, categoriaService);
 
-        if(categoriaSelected.isPresent()){
-            Categoria c = categoriaSelected.get();
-            Producto savedProducto = productoService.saveProducto(newProducto, productoDtoConverter);
-            productoService.addCategoriaToProducto(savedProducto, c, categoriaService);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(productoDtoConverter.convertToDto(savedProducto));
-        }
-
-       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-
-    }
-
-
-    @ExceptionHandler(ProductoNotFoundException.class)
-    public ResponseEntity<ApiError> handleProductoNoEncontrado(ProductoNotFoundException exception){
-
-        ApiError error = new ApiError();
-
-        error.setEstado(HttpStatus.NOT_FOUND);
-        error.setFecha(LocalDateTime.now());
-        error.setMensaje(exception.getMessage());
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-
-    }
-
-    public ResponseEntity<ApiError> handleJsonMappingException(JsonMappingException exception){
-
-        ApiError error = new ApiError();
-
-        error.setEstado(HttpStatus.BAD_REQUEST);
-        error.setFecha(LocalDateTime.now());
-        error.setMensaje(exception.getMessage());
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        return ResponseEntity.status(HttpStatus.CREATED).body(productoDtoConverter.convertToDto(savedProducto));
 
     }
 

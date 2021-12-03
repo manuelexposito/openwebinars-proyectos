@@ -14,7 +14,7 @@ import java.io.Serializable;
 public class Producto implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue
     private Long id;
 
     private String nombre;
