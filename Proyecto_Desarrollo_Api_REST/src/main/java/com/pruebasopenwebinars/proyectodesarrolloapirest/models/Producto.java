@@ -24,14 +24,5 @@ public class Producto implements Serializable {
     @JoinColumn(name="categoria_id")
     private Categoria categoria;
 
-    //HELPERS
-    public void addCategoriaToProducto(Categoria c){
-        categoria = c;
-        c.getProductos().add(this);
-    }
-    public void removeCategoriaFromProducto(Categoria c){
-        c.getProductos().remove(this);
-        categoria = null;
-    }
 
 }
